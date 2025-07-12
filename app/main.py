@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.requests import Request
+from fastapi import Header, HTTPException, Request, Depends
+from app.user_store import get_or_create_user_id
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -10,8 +12,23 @@ from app.slide_generator import generate_presentation
 from app.presentation_store import store, get_metadata
 import os
 
+def get_current_user(request: Request, x_api_key: str = Header(...)):
+    user_id = get_or_create_user_id(x_api_key)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    
+    request.state.user_id = user_id
+    return user_id
+
 # Create limiter
-limiter = Limiter(key_func=get_remote_address)
+"""API rate limiting by anyone"""
+# limiter = Limiter(key_func=get_remote_address)
+
+def user_key_func(request: Request):
+    return getattr(request.state, "user_id", "anonymous")
+
+"""API rate limiting per user"""
+limiter = Limiter(key_func=user_key_func)
 
 # Create FastAPI app with middleware
 app = FastAPI(title="Slide Generator API", version="1.0")
@@ -42,7 +59,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 @app.post("/api/v1/presentations", response_model=PresentationCreatedResponse, summary="Create a new presentation")
 @limiter.limit("1/hour")
-def create_presentation(payload: PresentationRequest, request: Request):
+def create_presentation(payload: PresentationRequest, request: Request, user_id: str = Depends(get_current_user)):
     """
     Generates a new .pptx presentation using GPT or custom content.
     """
@@ -60,7 +77,7 @@ def create_presentation(payload: PresentationRequest, request: Request):
 
 @app.get("/api/v1/presentations/{id}", response_model=PresentationMetadata, summary="Get presentation metadata")
 @limiter.limit("1/minute")
-def get_presentation(id: str, request: Request):
+def get_presentation(id: str, request: Request, user_id: str = Depends(get_current_user)):
     """
     Fetches metadata (topic, config) for a specific presentation.
     """
@@ -76,7 +93,7 @@ def get_presentation(id: str, request: Request):
     include_in_schema=False  # avoid Swagger rendering issue
 )
 @limiter.limit("1/minute")
-def download_presentation(id: str, request: Request):
+def download_presentation(id: str, request: Request, user_id: str = Depends(get_current_user)):
     """
     Returns the .pptx file as a binary download.
     """

@@ -24,7 +24,7 @@ async def get_presentation(id: str, request: Request, user_id: str = Depends(get
         raise HTTPException(status_code=404, detail="Presentation not found")
     return meta
 
-@router.get("/{id}/download", include_in_schema=False, response_class=FileResponse)
+@router.get("/{id}/download", response_class=FileResponse)
 @limiter.limit("1/minute")
 async def download_presentation(id: str, request: Request):
     meta = await to_thread.run_sync(get_metadata, id)

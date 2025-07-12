@@ -1,13 +1,30 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.requests import Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.models import PresentationRequest, SlideConfig, PresentationMetadata, PresentationCreatedResponse
 from app.slide_generator import generate_presentation
 from app.presentation_store import store, get_metadata
 import os
 
+# Create limiter
+limiter = Limiter(key_func=get_remote_address)
+
+# Create FastAPI app with middleware
 app = FastAPI(title="Slide Generator API", version="1.0")
+app.state.limiter = limiter
+
+# Attach rate limit exception handler
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"error": "Rate limit exceeded. Try again later."},
+    )
+
 @app.exception_handler(StarletteHTTPException)
 async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse(
@@ -24,7 +41,8 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 
 @app.post("/api/v1/presentations", response_model=PresentationCreatedResponse, summary="Create a new presentation")
-def create_presentation(payload: PresentationRequest):
+@limiter.limit("1/hour")
+def create_presentation(payload: PresentationRequest, request: Request):
     """
     Generates a new .pptx presentation using GPT or custom content.
     """
@@ -41,7 +59,8 @@ def create_presentation(payload: PresentationRequest):
         
 
 @app.get("/api/v1/presentations/{id}", response_model=PresentationMetadata, summary="Get presentation metadata")
-def get_presentation(id: str):
+@limiter.limit("1/minute")
+def get_presentation(id: str, request: Request):
     """
     Fetches metadata (topic, config) for a specific presentation.
     """
@@ -56,7 +75,8 @@ def get_presentation(id: str):
     response_class=FileResponse,
     include_in_schema=False  # avoid Swagger rendering issue
 )
-def download_presentation(id: str):
+@limiter.limit("1/minute")
+def download_presentation(id: str, request: Request):
     """
     Returns the .pptx file as a binary download.
     """

@@ -4,3 +4,4 @@ python-pptx
 openai
 python-multipart
 python-dotenv
+slowapi

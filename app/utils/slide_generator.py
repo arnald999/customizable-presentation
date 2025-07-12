@@ -5,8 +5,8 @@ import re
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-from app.models import PresentationRequest
-from app.presentation_store import store
+from app.models.models import PresentationRequest
+from app.stores.presentation_store import store
 from dotenv import load_dotenv
 from openai import OpenAI  # ✅ new-style SDK
 

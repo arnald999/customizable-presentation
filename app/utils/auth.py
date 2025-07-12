@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.user_store import get_or_create_user_id
+from app.stores.user_store import get_or_create_user_id
 
 security = HTTPBearer(auto_error=True)  # Enables Swagger "Authorize" button
 

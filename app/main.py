@@ -2,15 +2,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.requests import Request
 from fastapi import Header, HTTPException, Request, Depends
-from app.user_store import get_or_create_user_id
+from app.stores.user_store import get_or_create_user_id
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from app.models import PresentationRequest, SlideConfig, PresentationMetadata, PresentationCreatedResponse
-from app.slide_generator import generate_presentation
-from app.presentation_store import store, get_metadata
-from app.auth import get_current_user
+from app.models.models import PresentationRequest, SlideConfig, PresentationMetadata, PresentationCreatedResponse
+from app.utils.slide_generator import generate_presentation
+from app.stores.presentation_store import store, get_metadata
+from app.utils.auth import get_current_user
 import os
 
 # def get_current_user(request: Request, x_api_key: str = Header(...)):
@@ -94,7 +94,7 @@ def get_presentation(id: str, request: Request, user_id: str = Depends(get_curre
     include_in_schema=False  # avoid Swagger rendering issue
 )
 @limiter.limit("1/minute")
-def download_presentation(id: str, request: Request, user_id: str = Depends(get_current_user)):
+def download_presentation(id: str, request: Request):
     """
     Returns the .pptx file as a binary download.
     """

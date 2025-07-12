@@ -1,22 +1,44 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.requests import Request
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.models import PresentationRequest, SlideConfig, PresentationMetadata, PresentationCreatedResponse
 from app.slide_generator import generate_presentation
 from app.presentation_store import store, get_metadata
 import os
 
 app = FastAPI(title="Slide Generator API", version="1.0")
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail, "status": exc.status_code}
+    )
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal server error", "detail": str(exc)}
+    )
+
 
 @app.post("/api/v1/presentations", response_model=PresentationCreatedResponse, summary="Create a new presentation")
 def create_presentation(payload: PresentationRequest):
     """
     Generates a new .pptx presentation using GPT or custom content.
     """
-    pres_id, file_path = generate_presentation(payload)
-    return {
-        "id": pres_id,
-        "download_url": f"/api/v1/presentations/{pres_id}/download"
-    }
+    try:
+        pres_id, file_path = generate_presentation(payload)
+        return {
+            "id": pres_id,
+            "download_url": f"/api/v1/presentations/{pres_id}/download"
+        }
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Unexpected server error")
+        
 
 @app.get("/api/v1/presentations/{id}", response_model=PresentationMetadata, summary="Get presentation metadata")
 def get_presentation(id: str):

@@ -48,6 +48,8 @@ def generate_slide_content(topic: str, num_slides: int = 5):
         clean_json = re.sub(r"[\x00-\x1F]+", "", clean_json)
 
         return json.loads(clean_json)
+    except json.JSONDecodeError:
+        raise RuntimeError("Failed to parse LLM response as valid JSON.")
     except Exception as e:
         raise RuntimeError(f"OpenRouter GPT Error: {e}")
 
@@ -88,17 +90,23 @@ def generate_presentation(payload: PresentationRequest):
         apply_theme(citation_tf, font=payload.config.font, color_hex="#888888")
 
     # Save presentation
-    file_id = str(uuid.uuid4())
-    output_dir = os.path.join(os.getcwd(), "samples")
-    os.makedirs(output_dir, exist_ok=True)
-    file_path = os.path.join(output_dir, f"{file_id}.pptx")
-    prs.save(file_path)
+    try:
+        file_id = str(uuid.uuid4())
+        output_dir = os.path.join(os.getcwd(), "samples")
+        os.makedirs(output_dir, exist_ok=True)
+        file_path = os.path.join(output_dir, f"{file_id}.pptx")
+        prs.save(file_path)
+    except Exception as e:
+        raise RuntimeError(f"Failed to save presentation file: {e}")
 
     # Store for later retrieval
-    store[file_id] = {
-        "file_path": file_path,
-        "topic": payload.topic,
-        "config": payload.config.dict()
-    }
+    try:
+        store[file_id] = {
+            "file_path": file_path,
+            "topic": payload.topic,
+            "config": payload.config.dict()
+        }
 
-    return file_id, file_path
+        return file_id, file_path
+    except Exception as e:
+        raise RuntimeError(f"Failed to store metadata: {e}")

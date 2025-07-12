@@ -6,7 +6,7 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from app.models.models import PresentationRequest
-from app.stores.presentation_store import store
+from app.stores.presentation_store import store, save_metadata
 from dotenv import load_dotenv
 from openai import OpenAI  # ✅ new-style SDK
 
@@ -101,11 +101,11 @@ def generate_presentation(payload: PresentationRequest):
 
     # Store for later retrieval
     try:
-        store[file_id] = {
+        save_metadata(file_id, {
             "file_path": file_path,
             "topic": payload.topic,
             "config": payload.config.dict()
-        }
+        })
 
         return file_id, file_path
     except Exception as e:

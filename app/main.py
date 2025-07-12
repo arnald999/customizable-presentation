@@ -12,6 +12,7 @@ from app.utils.slide_generator import generate_presentation
 from app.stores.presentation_store import store, get_metadata
 from app.utils.auth import get_current_user
 import os
+from anyio import to_thread
 
 # def get_current_user(request: Request, x_api_key: str = Header(...)):
 #     user_id = get_or_create_user_id(x_api_key)
@@ -60,12 +61,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 @app.post("/api/v1/presentations", response_model=PresentationCreatedResponse, summary="Create a new presentation")
 @limiter.limit("1/hour")
-def create_presentation(payload: PresentationRequest, request: Request, user_id: str = Depends(get_current_user)):
+async def create_presentation(payload: PresentationRequest, request: Request, user_id: str = Depends(get_current_user)):
     """
     Generates a new .pptx presentation using GPT or custom content.
     """
     try:
-        pres_id, file_path = generate_presentation(payload)
+        pres_id, file_path = await to_thread.run_sync(generate_presentation, payload)
         return {
             "id": pres_id,
             "download_url": f"/api/v1/presentations/{pres_id}/download"
@@ -78,11 +79,11 @@ def create_presentation(payload: PresentationRequest, request: Request, user_id:
 
 @app.get("/api/v1/presentations/{id}", response_model=PresentationMetadata, summary="Get presentation metadata")
 @limiter.limit("1/minute")
-def get_presentation(id: str, request: Request, user_id: str = Depends(get_current_user)):
+async def get_presentation(id: str, request: Request, user_id: str = Depends(get_current_user)):
     """
     Fetches metadata (topic, config) for a specific presentation.
     """
-    meta = get_metadata(id)
+    meta = await to_thread.run_sync(get_metadata, id)
     if not meta:
         raise HTTPException(status_code=404, detail="Presentation not found")
     return meta
@@ -94,11 +95,11 @@ def get_presentation(id: str, request: Request, user_id: str = Depends(get_curre
     include_in_schema=False  # avoid Swagger rendering issue
 )
 @limiter.limit("1/minute")
-def download_presentation(id: str, request: Request):
+async def download_presentation(id: str, request: Request):
     """
     Returns the .pptx file as a binary download.
     """
-    meta = get_metadata(id)
+    meta = await to_thread.run_sync(get_metadata, id)
     if not meta or not os.path.exists(meta["file_path"]):
         raise HTTPException(status_code=404, detail="Presentation not found or file missing")
 

@@ -10,15 +10,16 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.models import PresentationRequest, SlideConfig, PresentationMetadata, PresentationCreatedResponse
 from app.slide_generator import generate_presentation
 from app.presentation_store import store, get_metadata
+from app.auth import get_current_user
 import os
 
-def get_current_user(request: Request, x_api_key: str = Header(...)):
-    user_id = get_or_create_user_id(x_api_key)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+# def get_current_user(request: Request, x_api_key: str = Header(...)):
+#     user_id = get_or_create_user_id(x_api_key)
+#     if not user_id:
+#         raise HTTPException(status_code=401, detail="Invalid or missing API key")
     
-    request.state.user_id = user_id
-    return user_id
+#     request.state.user_id = user_id
+#     return user_id
 
 # Create limiter
 """API rate limiting by anyone"""

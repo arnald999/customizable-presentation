@@ -1,7 +1,7 @@
 import threading
 
-store_lock = threading.Lock()
 store = {}
+store_lock = threading.Lock()
 
 def get_metadata(pres_id: str):
     with store_lock:

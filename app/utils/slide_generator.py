@@ -8,17 +8,18 @@ from pptx.dml.color import RGBColor
 from app.models.models import PresentationRequest
 from app.stores.presentation_store import store, save_metadata
 from dotenv import load_dotenv
-from openai import OpenAI  # ✅ new-style SDK
+from openai import OpenAI
+from app.config.llm_registry import LLM_MODEL_MAP
 
 # Load API key
 load_dotenv()
 client = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY"),
-    base_url="https://openrouter.ai/api/v1"  # ✅ Required for OpenRouter
+    base_url="https://openrouter.ai/api/v1"
 )
 
 # Generate content using OpenRouter LLM
-def generate_slide_content(topic: str, num_slides: int = 5):
+def generate_slide_content(topic: str, num_slides: int = 5, model: str = "mistral"):
     prompt = (
         f"Return ONLY valid JSON (no explanation). Generate {num_slides} PowerPoint slides on '{topic}'.\n"
         "Each slide should be a JSON object with:\n"
@@ -29,9 +30,13 @@ def generate_slide_content(topic: str, num_slides: int = 5):
         "[{\"title\": \"Slide 1\", \"points\": [\"pt1\", \"pt2\"], \"citation\": \"source\"}, ...]"
     )
 
+    resolved_model = LLM_MODEL_MAP.get(model.lower())
+    if not resolved_model:
+        raise ValueError(f"Unsupported LLM model alias: {model}")
+
     try:
         response = client.chat.completions.create(
-            model="mistralai/mixtral-8x7b-instruct",
+            model=resolved_model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
         )
@@ -65,7 +70,7 @@ def apply_theme(text_frame, font="Arial", color_hex="#000000"):
 # Generate presentation from user payload
 def generate_presentation(payload: PresentationRequest):
     prs = Presentation()
-    slides_data = generate_slide_content(payload.topic, payload.config.num_slides)
+    slides_data = generate_slide_content(payload.topic, payload.config.num_slides, payload.config.llm_model)
 
     # Title slide
     title_slide = prs.slides.add_slide(prs.slide_layouts[0])

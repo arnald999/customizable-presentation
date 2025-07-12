@@ -6,7 +6,7 @@ A FastAPI-powered backend to generate customizable PowerPoint presentations usin
 
 ## 🚀 Features
 
-- ✅ Generate `.pptx` files from a topic
+- ✅ Generate and configure style of `.pptx` files from a topic
 - 🎨 Custom font, and slide count
 - 🧠 Dynamic LLM selection (e.g., Mistral, LLaMA 3, GPT-4)
 - 🔐 API key-based authentication
@@ -17,23 +17,25 @@ A FastAPI-powered backend to generate customizable PowerPoint presentations usin
 
 ## 📂 Project Structure
 ```
+.
 ├── api/
-│ └── routes_presentation.py # All API routes
+│   └── routes_presentation.py        # All API routes
 ├── config/
-│ └── llm_registry.py # LLM aliases (mistral, llama3, etc.)
+│   └── llm_registry.py               # LLM aliases (mistral, llama3, etc.)
 ├── models/
-│ └── models.py # Pydantic schemas
+│   └── models.py                     # Pydantic schemas
 ├── stores/
-│ ├── presentation_store.py # Slide metadata store
-│ └── user_store.py # API key → user ID store
+│   ├── presentation_store.py         # Slide metadata store
+│   └── user_store.py                 # API key → user ID store
 ├── utils/
-│ ├── auth.py # API key verification
-│ ├── limiter.py # Rate limiting logic
-│ └── slide_generator.py # LLM + PowerPoint logic
-├── samples/ # Generated .pptx files
-├── main.py # FastAPI entrypoint
+│   ├── auth.py                       # API key verification
+│   ├── limiter.py                    # Rate limiting logic
+│   ├── slide_generator.py            # LLM-based slide content + .pptx creation
+│   └── slide_styler.py               # Re-theming existing .pptx files (configure endpoint)
+├── samples/                          # Generated .pptx files
+├── main.py                           # FastAPI entrypoint
 ├── requirements.txt
-└── render.yaml # Render.com deployment
+└── render.yaml                       # Render.com deployment config
 ```
 
 ---
@@ -131,6 +133,7 @@ Short names mapped in llm_registry.py:
 | POST   | `/api/v1/presentations`                  | Generate new presentation        |
 | GET    | `/api/v1/presentations/{id}`             | Get presentation metadata        |
 | GET    | `/api/v1/presentations/{id}/download`    | Download `.pptx`                 |
+| POST   | `/api/v1/presentations/{id}/configure`   | Change style and color of `.pptx`|
 
 ---
 

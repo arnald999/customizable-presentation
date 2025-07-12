@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import FileResponse
 from anyio import to_thread
-from app.models.models import PresentationRequest, SlideConfig, PresentationMetadata, PresentationCreatedResponse
+from app.models.models import PresentationRequest, SlideStyleConfig, PresentationMetadata, PresentationCreatedResponse
 from app.utils.slide_generator import generate_presentation
-from app.stores.presentation_store import get_metadata
+from app.stores.presentation_store import get_metadata, save_metadata
+from app.utils.slide_styler import apply_config_to_presentation
 from app.utils.auth import get_current_user
 from app.utils.limiter import limiter
 import os
@@ -31,3 +32,20 @@ async def download_presentation(id: str, request: Request):
     if not meta or not os.path.exists(meta["file_path"]):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(meta["file_path"], filename=f"{id}.pptx")
+
+@router.post("/{id}/configure", summary="Re-style an existing presentation")
+async def configure_presentation(id: str, config: SlideStyleConfig, request: Request, user_id: str = Depends(get_current_user)):
+    meta = get_metadata(id)
+    if not meta or not os.path.exists(meta["file_path"]):
+        raise HTTPException(status_code=404, detail="Presentation not found")
+
+    try:
+        apply_config_to_presentation(meta["file_path"], font=config.font, color_hex=config.color_theme)
+
+        # Optional: update metadata
+        meta["config"].update(config.dict())
+        save_metadata(id, meta)
+
+        return {"message": "Presentation updated successfully", "id": id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to re-style presentation: {e}")

@@ -9,12 +9,16 @@ class LLMModel(str, Enum):
     llama3 = "llama3"
     gpt4 = "gpt4"
     gemma = "gemma"
-    claude = "claude"
 
 class SlideConfig(BaseModel):
     num_slides: int = Field(..., ge=1, le=20, description="Number of slides (1 to 20)")
     font: Optional[str] = "Arial"
-    color_theme: Optional[str] = "blue"
+    color_theme: Optional[str] = "#0D47A1"
+    llm_model: LLMModel = LLMModel.mistral
+
+class SlideStyleConfig(BaseModel):
+    font: Optional[str] = "Arial"
+    color_theme: Optional[str] = "#0D47A1"
     llm_model: LLMModel = LLMModel.mistral
 
 class PresentationRequest(BaseModel):

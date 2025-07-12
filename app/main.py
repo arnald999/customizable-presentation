@@ -1,13 +1,13 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from app.models import PresentationRequest, SlideConfig
+from app.models import PresentationRequest, SlideConfig, PresentationMetadata, PresentationCreatedResponse
 from app.slide_generator import generate_presentation
 from app.presentation_store import store, get_metadata
 import os
 
 app = FastAPI(title="Slide Generator API", version="1.0")
 
-@app.post("/api/v1/presentations", summary="Create a new presentation")
+@app.post("/api/v1/presentations", response_model=PresentationCreatedResponse, summary="Create a new presentation")
 def create_presentation(payload: PresentationRequest):
     """
     Generates a new .pptx presentation using GPT or custom content.
@@ -18,7 +18,7 @@ def create_presentation(payload: PresentationRequest):
         "download_url": f"/api/v1/presentations/{pres_id}/download"
     }
 
-@app.get("/api/v1/presentations/{id}", summary="Get presentation metadata")
+@app.get("/api/v1/presentations/{id}", response_model=PresentationMetadata, summary="Get presentation metadata")
 def get_presentation(id: str):
     """
     Fetches metadata (topic, config) for a specific presentation.
